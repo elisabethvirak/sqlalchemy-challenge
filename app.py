@@ -36,11 +36,15 @@ def home():
     f"Precipitation Analysis: /api/v1.0/precipitation<br/>"
     f"Station Analysis: /api/v1.0/stations<br/>"
     f"Temperature Analysis: /api/v1.0/tobs<br/>"
+    f"Temp Stats After Start Date: /api/v1.0/<start><br/>"
+    f"Temp Stats Between Dates: /api/v1.0/<start>/<end>"
     )
 
 
 
 # Define precipitation page
+'''query results to a dictionary using date as the key and 
+prcp as the value'''
 @app.route("/api/v1.0/precipitation")
 def precipitation():
     print("Server received request for 'Precipitation' page...")
@@ -62,6 +66,7 @@ def precipitation():
     return  jsonify(precip_data)
 
 # Define precipitation page
+'''Return a JSON list of stations from the dataset.'''
 @app.route("/api/v1.0/stations")
 def station():
     print("Server received request for 'Stations' page...")
@@ -83,6 +88,8 @@ def station():
     return jsonify(station_data)
 
 # Define precipitation page
+'''Query the dates and temperature observations 
+of the most active station for the last year of data.'''
 @app.route("/api/v1.0/tobs")
 def temperature():
     print("Server received request for 'Temperature' page...")
@@ -118,6 +125,80 @@ def temperature():
     # jsonify the dictionary
     return jsonify(tobs_data)
 
+# Define start page
+'''calculate TMIN, TAVG, and TMAX for all dates greater than 
+and equal to the start date.'''
+@app.route("/api/v1.0/<start>")
+def start(start=None):
+    print("Server received request for 'Start Range' page...")
+
+    # query for temperature data for input date
+    session = Session(engine)
+    min_date = session.query(Measurement.date, func.min(Measurement.tobs)).filter(Measurement.date >= start).all()
+    max_date = session.query(Measurement.date, func.max(Measurement.tobs)).filter(Measurement.date >= start).all()
+    avg_date = session.query(Measurement.date, func.avg(Measurement.tobs)).filter(Measurement.date >= start).all()
+    session.close()
+
+    start_list = []
+    
+    # put minimum temp into dictionary and append list
+    for x in min_date:
+        min_dict = {}
+        min_dict['Minimum Temperature Date'] = x[0]
+        min_dict['Minimum Temperature'] = x[1]
+        start_list.append(min_dict)
+    
+    # put maximum temp into dictionary and append list
+    for x in max_date:
+        max_dict = {}
+        max_dict['Maximum Temperature Date'] = x[0]
+        max_dict['Maximum Temperature'] = x[1]
+        start_list.append(max_dict)
+    
+    # put average temp into dictionary and append list
+    for x in avg_date:
+        avg_dict = {}
+        avg_dict['Average Temperature Date'] = x[0]
+        avg_dict['Average Temperature'] = x[1]
+        start_list.append(avg_dict)
+    
+    return jsonify(start_list)
+
+@app.route("/api/v1.0/<start>/<end>")
+def start_end(start=None, end=None):
+    print("Server received request for 'Start Range' page...")
+
+    # query for temperature data for input date
+    session = Session(engine)
+    range_min = session.query(Measurement.date, func.min(Measurement.tobs)).filter(Measurement.date >= start).filter(Measurement.date <= end).all()
+    range_max = session.query(Measurement.date, func.max(Measurement.tobs)).filter(Measurement.date >= start).filter(Measurement.date <= end).all()
+    range_avg = session.query(Measurement.date, func.avg(Measurement.tobs)).filter(Measurement.date >= start).filter(Measurement.date <= end).all()
+    session.close()
+
+    range_list = []
+    
+    # put minimum temp into dictionary and append list
+    for x in range_min:
+        min_dict = {}
+        min_dict['Minimum Temperature Date'] = x[0]
+        min_dict['Minimum Temperature'] = x[1]
+        range_list.append(min_dict)
+    
+    # put maximum temp into dictionary and append list
+    for x in range_max:
+        max_dict = {}
+        max_dict['Maximum Temperature Date'] = x[0]
+        max_dict['Maximum Temperature'] = x[1]
+        range_list.append(max_dict)
+    
+    # put average temp into dictionary and append list
+    for x in range_avg:
+        avg_dict = {}
+        avg_dict['Average Temperature Date'] = x[0]
+        avg_dict['Average Temperature'] = x[1]
+        range_list.append(avg_dict)
+    
+    return jsonify(range_list)
 
 if __name__ == "__main__":
     app.run(debug=True)
